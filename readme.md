@@ -291,3 +291,61 @@ MIT
 
 For questions or issues, please open a GitHub issue.
 API Gateway enforces authentication via a JWT guard for protected endpoints (teams and transfers). Ensure `Authorization: Bearer <token>` is set.
+### Player Improvements (v1)
+
+Path: `/api/v1/players/improve`
+
+- Method: `POST`
+- Security: `Authorization: Bearer <token>` (JWT)
+- Rate limiting: 20 requests per 60 seconds per user (subject to global throttler)
+
+Request body:
+```json
+{
+  "player_id": "a4f8c6b1-1c2d-4e5f-9a8b-1234567890ab",
+  "improvement_type": "pace",
+  "value": 3
+}
+```
+
+Response 200:
+```json
+{
+  "success": true,
+  "updated_player_data": {
+    "id": "a4f8c6b1-1c2d-4e5f-9a8b-1234567890ab",
+    "first_name": "Alex",
+    "last_name": "Smith",
+    "position": "MID",
+    "age": 24,
+    "overall_rating": 78,
+    "pace": 83,
+    "shooting": 70,
+    "passing": 75,
+    "dribbling": 80,
+    "defending": 60,
+    "physical": 72,
+    "market_value": "7800000.00",
+    "teamId": "c5e1d9f2-7b34-4f8a-b2a1-abcdef123456"
+  }
+}
+```
+
+Error responses:
+- 400: Invalid parameters (skill must be one of pace/shooting/passing/dribbling/defending/physical; value 1-10)
+- 404: Player not found or not owned by requesting user
+- 500: Internal server error
+
+Example curl:
+```bash
+curl -X POST http://localhost:3000/api/v1/players/improve \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "player_id": "a4f8c6b1-1c2d-4e5f-9a8b-1234567890ab",
+    "improvement_type": "pace",
+    "value": 3
+  }'
+```
+
+OpenAPI/Swagger: navigate to `http://localhost:3000/api` and find the Players section; endpoint is documented with request/response schemas and examples.
