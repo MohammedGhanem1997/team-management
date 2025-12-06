@@ -55,12 +55,29 @@ Create a root `.env` at project root and use Docker Compose `env_file` to load v
 API_GATEWAY_PORT=3000
 AUTH_SERVICE_HOST=auth-service
 AUTH_SERVICE_PORT=3001
+AUTH_TCP_PORT=3003
 TEAM_SERVICE_HOST=team-service
 TEAM_SERVICE_PORT=3002
+
+# RabbitMQ
 RABBITMQ_URL=amqp://rabbitmq:5672
+
+# JWT
 JWT_SECRET=your-secret-key-change-in-production
+
+# Databases (containers)
 AUTH_DATABASE_URL=postgresql://postgres:password@auth-postgres:5432/football_auth
 TEAM_DATABASE_URL=postgresql://postgres:password@team-postgres:5432/football_teams
+
+# Databases (local dev)
+DEV_AUTH_DATABASE_URL=postgresql://postgres:password@localhost:5432/football_auth
+DEV_TEAM_DATABASE_URL=postgresql://postgres:password@localhost:5432/football_teams
+
+# Redis
+REDIS_URL=redis://redis:6379
+
+# APM
+APM_SERVER_URL=http://apm-server:8200
 ```
 
 Development and production configs live under `config/`:
@@ -186,7 +203,7 @@ Query params: `teamName`, `playerName`, `minPrice`, `maxPrice`
     ```json
     {
       "success": true,
-      "updated_player_data": { ...player fields... }
+      "updated_player_data": {  }
     }
     ```
 
@@ -359,7 +376,7 @@ Ensure all services are running and reachable on localhost.
 
 ### 2. Configure Environment Variables (Local)
 
-Create a `.env` file at project root (or use `config/dev/.env`) with localhost values:
+Create a `.env` file at project root (or use `config/dev/`) with localhost values:
 
 ```env
 # API Gateway
