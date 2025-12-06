@@ -22,4 +22,3 @@ echo "Running migrations..."
 npm run migration:run || true
 
 exec "$@"
-
