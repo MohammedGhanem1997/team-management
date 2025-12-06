@@ -55,12 +55,29 @@ Create a root `.env` at project root and use Docker Compose `env_file` to load v
 API_GATEWAY_PORT=3000
 AUTH_SERVICE_HOST=auth-service
 AUTH_SERVICE_PORT=3001
+AUTH_TCP_PORT=3003
 TEAM_SERVICE_HOST=team-service
 TEAM_SERVICE_PORT=3002
+
+# RabbitMQ
 RABBITMQ_URL=amqp://rabbitmq:5672
+
+# JWT
 JWT_SECRET=your-secret-key-change-in-production
+
+# Databases (containers)
 AUTH_DATABASE_URL=postgresql://postgres:password@auth-postgres:5432/football_auth
 TEAM_DATABASE_URL=postgresql://postgres:password@team-postgres:5432/football_teams
+
+# Databases (local dev)
+DEV_AUTH_DATABASE_URL=postgresql://postgres:password@localhost:5432/football_auth
+DEV_TEAM_DATABASE_URL=postgresql://postgres:password@localhost:5432/football_teams
+
+# Redis
+REDIS_URL=redis://redis:6379
+
+# APM
+APM_SERVER_URL=http://apm-server:8200
 ```
 
 Development and production configs live under `config/`:
@@ -93,23 +110,6 @@ cd ../team-service
 npm run migration:run
 ```
 
-### 6. Start the Services
-
-Open 3 terminal windows:
-
-```bash
-# Terminal 1 - Auth Service
-cd auth-service
-npm run start:dev
-
-# Terminal 2 - Team Service
-cd team-service
-npm run start:dev
-
-# Terminal 3 - API Gateway
-cd api-gateway
-npm run start:dev
-```
 
 The API Gateway will be available at `http://localhost:3000`
 
@@ -185,6 +185,73 @@ Query params: `teamName`, `playerName`, `minPrice`, `maxPrice`
   "playerId": "uuid"
 }
 ```
+
+### Player Improvements
+
+- `POST /api/v1/players/improve`
+  - Body:
+    ```json
+    {
+      "player_id": "uuid",
+      "improvement_type": "pace",
+      "value": 3
+    }
+    ```
+  - Security: `Authorization: Bearer <token>`
+  - Rate limiting: `20 req / 60s`
+  - Response:
+    ```json
+    {
+      "success": true,
+      "updated_player_data": {  }
+    }
+    ```
+
+- `POST /players/:playerId/skills`
+  - Body:
+    ```json
+    {
+      "skill": "pace",
+      "amount": 3
+    }
+    ```
+  - Security: `Authorization: Bearer <token>`
+  - Rate limiting: `20 req / 60s`
+
+## Endpoint Catalog
+
+Below is a quick catalog of available HTTP endpoints via the API Gateway:
+
+- Authentication
+  - `POST /auth/register` — Register user
+  - `POST /auth/login` — Login and get JWT
+- Team Management
+  - `GET /teams/my-team` — Get current user's team (JWT required)
+- Transfer Market
+  - `GET /transfers` — List transfer market, filters supported
+  - `POST /transfers/list-player` — List a player (JWT required)
+  - `POST /transfers/remove-player` — Remove a player from listing (JWT required)
+  - `POST /transfers/buy-player` — Buy a listed player (JWT required)
+- Player Improvements
+  - `POST /api/v1/players/improve` — Improve player skill by type/value (JWT required)
+  - `POST /players/:playerId/skills` — Improve a specific player's skill (JWT required)
+
+## Swagger / OpenAPI
+
+The API Gateway exposes Swagger docs.
+
+- Start the API Gateway (Docker or local):
+  - Docker: `docker compose up -d api-gateway`
+  - Local: `cd api-gateway && npm run start:dev`
+- Open Swagger UI:
+  - `http://localhost:3000/api`
+- Authentication in Swagger:
+  - Click `Authorize`, paste `Bearer <token>` from `/auth/login` or `/auth/register` response.
+- Explore endpoints under sections: Authentication, Team Management, Transfer Market, Players.
+- Models for player improvement:
+  - Request: `ImprovePlayerSkillRequestDto`
+  - Response: `ImprovePlayerSkillResponseDto`
+  - Player: `PlayerDto`
 
 ## Testing
 
@@ -309,7 +376,7 @@ Ensure all services are running and reachable on localhost.
 
 ### 2. Configure Environment Variables (Local)
 
-Create a `.env` file at project root (or use `config/dev/.env`) with localhost values:
+Create a `.env` file at project root (or use `config/dev/`) with localhost values:
 
 ```env
 # API Gateway
@@ -428,69 +495,3 @@ API Gateway will be available at `http://localhost:3000`. Swagger docs: `http://
 - Confirm environment variables loaded in each service
 - Run `npm run build` before migrations
 
-## License
-
-MIT
-
-## Contact
-
-For questions or issues, please open a GitHub issue.
-API Gateway enforces authentication via a JWT guard for protected endpoints (teams and transfers). Ensure `Authorization: Bearer <token>` is set.
-### Player Improvements (v1)
-
-Path: `/api/v1/players/improve`
-
-- Method: `POST`
-- Security: `Authorization: Bearer <token>` (JWT)
-- Rate limiting: 20 requests per 60 seconds per user (subject to global throttler)
-
-Request body:
-```json
-{
-  "player_id": "a4f8c6b1-1c2d-4e5f-9a8b-1234567890ab",
-  "improvement_type": "pace",
-  "value": 3
-}
-```
-
-Response 200:
-```json
-{
-  "success": true,
-  "updated_player_data": {
-    "id": "a4f8c6b1-1c2d-4e5f-9a8b-1234567890ab",
-    "first_name": "Alex",
-    "last_name": "Smith",
-    "position": "MID",
-    "age": 24,
-    "overall_rating": 78,
-    "pace": 83,
-    "shooting": 70,
-    "passing": 75,
-    "dribbling": 80,
-    "defending": 60,
-    "physical": 72,
-    "market_value": "7800000.00",
-    "teamId": "c5e1d9f2-7b34-4f8a-b2a1-abcdef123456"
-  }
-}
-```
-
-Error responses:
-- 400: Invalid parameters (skill must be one of pace/shooting/passing/dribbling/defending/physical; value 1-10)
-- 404: Player not found or not owned by requesting user
-- 500: Internal server error
-
-Example curl:
-```bash
-curl -X POST http://localhost:3000/api/v1/players/improve \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "player_id": "a4f8c6b1-1c2d-4e5f-9a8b-1234567890ab",
-    "improvement_type": "pace",
-    "value": 3
-  }'
-```
-
-OpenAPI/Swagger: navigate to `http://localhost:3000/api` and find the Players section; endpoint is documented with request/response schemas and examples.
