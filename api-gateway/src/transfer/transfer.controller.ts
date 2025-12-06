@@ -10,7 +10,8 @@ import {
 } from "@nestjs/common";
 import { ClientProxy } from "@nestjs/microservices";
 import { firstValueFrom } from "rxjs";
-import { ConflictException, Logger } from "@nestjs/common";
+import { Logger } from "@nestjs/common";
+import { buildHttpException } from "../common/errors/error.helper";
 import {
   ApiTags,
   ApiOperation,
@@ -39,9 +40,13 @@ export class TransferController {
   @ApiOperation({ summary: "Get available transfers" })
   @ApiResponse({ status: 200, description: "Transfers retrieved successfully" })
   async getTransfers(@Query() filters: TransferFilterDto) {
-    return firstValueFrom(
-      this.teamServiceClient.send("get_transfers", filters)
-    );
+    try {
+      return await firstValueFrom(
+        this.teamServiceClient.send("get_transfers", filters)
+      );
+    } catch (err) {
+      throw buildHttpException(err, TransferController.name);
+    }
   }
 
   @Post("list-player")
@@ -50,12 +55,16 @@ export class TransferController {
   @ApiOperation({ summary: "List player on transfer market" })
   @ApiResponse({ status: 200, description: "Player listed successfully" })
   async listPlayer(@Req() req: any, @Body() listPlayerDto: ListPlayerDto) {
-    return firstValueFrom(
-      this.teamServiceClient.send("list_player", {
-        userId: req.user.id,
-        ...listPlayerDto,
-      })
-    );
+    try {
+      return await firstValueFrom(
+        this.teamServiceClient.send("list_player", {
+          userId: req.user.id,
+          ...listPlayerDto,
+        })
+      );
+    } catch (err) {
+      throw buildHttpException(err, TransferController.name);
+    }
   }
 
   @Post("remove-player")
@@ -67,12 +76,16 @@ export class TransferController {
     @Req() req: any,
     @Body("playerId") playerId: string
   ) {
-    return firstValueFrom(
-      this.teamServiceClient.send("remove_player_from_transfer", {
-        userId: req.user.id,
-        playerId,
-      })
-    );
+    try {
+      return await firstValueFrom(
+        this.teamServiceClient.send("remove_player_from_transfer", {
+          userId: req.user.id,
+          playerId,
+        })
+      );
+    } catch (err) {
+      throw buildHttpException(err, TransferController.name);
+    }
   }
 
   @Post("buy-player")
@@ -89,13 +102,8 @@ export class TransferController {
           ...buyPlayerDto,
         })
       );
-    } catch (err: any) {
-      const msg = err?.message || err?.response?.message || "Unknown error";
-      this.logger.warn(`Buy player failed: ${msg}`);
-      if (msg && typeof msg === "string" && msg.includes("not on transfer list")) {
-        throw new ConflictException("Player is not on transfer list");
-      }
-      throw err;
+    } catch (err) {
+      throw buildHttpException(err, TransferController.name);
     }
   }
 }
