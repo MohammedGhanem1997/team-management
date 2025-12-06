@@ -1,0 +1,165 @@
+version: '3.8'
+
+services:
+  auth-postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: football_auth
+    ports:
+      - "5433:5432"
+    depends_on:
+      - rabbitmq
+      - team-postgres
+  
+    volumes:
+      - auth_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d football_auth"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  team-postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: football_teams
+    ports:
+      - "5434:5432"
+    volumes:
+      - team_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d football_teams"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+  auth-service:
+    build:
+      context: ./auth-service
+    env_file:
+      - .env
+    environment:
+      PORT: ${AUTH_SERVICE_PORT}
+      DATABASE_URL: ${AUTH_DATABASE_URL}
+      RABBITMQ_URL: ${RABBITMQ_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      AUTH_TCP_PORT: ${AUTH_TCP_PORT}
+    depends_on:
+      auth-postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+    ports:
+      - "3001:3001"
+
+  team-service:
+    build:
+      context: ./team-service
+    env_file:
+      - .env
+    environment:
+      PORT: ${TEAM_SERVICE_PORT}
+      DATABASE_URL: ${TEAM_DATABASE_URL}
+      RABBITMQ_URL: ${RABBITMQ_URL}
+    depends_on:
+      team-postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+    ports:
+      - "3002:3002"
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+    env_file:
+      - .env
+    environment:
+      PORT: ${API_GATEWAY_PORT}
+      AUTH_SERVICE_HOST: ${AUTH_SERVICE_HOST}
+      AUTH_SERVICE_PORT: ${AUTH_TCP_PORT}
+      TEAM_SERVICE_HOST: ${TEAM_SERVICE_HOST}
+      TEAM_SERVICE_PORT: ${TEAM_SERVICE_PORT}
+      RABBITMQ_URL: ${RABBITMQ_URL}
+      REDIS_URL: redis://redis:6379
+
+    depends_on:
+      - auth-service
+      - team-service
+      - elasticsearch
+      -  apm-server
+      - redis
+      - kibana
+    ports:
+      - "3000:3000"
+
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  elasticsearch:
+    image: elasticsearch:7.17.15
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+
+  kibana:
+    image: kibana:7.17.15
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+
+  apm-server:
+    image:  elastic/apm-server:7.17.15
+    environment:
+      - "apm-server.host=0.0.0.0:8200"
+      - "output.elasticsearch.hosts=[http://elasticsearch:9200]"
+    ports:
+      - "8200:8200"
+    depends_on:
+      - elasticsearch
+
+  filebeat:
+    image: elastic/filebeat:7.17.15
+    user: root
+    command: ["-e", "-strict.perms=false"]
+    volumes:
+      - ./filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - elasticsearch
+      - kibana
+volumes:
+  auth_pg_data:
+  team_pg_data:
+  rabbitmq_data:
+  redis_data:

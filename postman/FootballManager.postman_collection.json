@@ -1,0 +1,282 @@
+{
+  "info": {
+    "name": "Football Online Manager",
+    "description": "Postman collection for API Gateway endpoints of the Football Online Manager system.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "email", "value": "user@example.com" },
+    { "key": "password", "value": "SecurePass123!" },
+    { "key": "token", "value": "" },
+    { "key": "teamName", "value": "" },
+    { "key": "playerName", "value": "" },
+    { "key": "minPrice", "value": "0" },
+    { "key": "maxPrice", "value": "10000000" },
+    { "key": "playerId", "value": "" },
+    { "key": "askingPrice", "value": "1500000" },
+    { "key": "teamId", "value": "" },
+    { "key": "playerIdSample", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201 or 200', function () {",
+                  "  pm.expect([200,201]).to.include(pm.response.code);",
+                  "});",
+                  "let json = {};",
+                  "try { json = pm.response.json(); } catch (e) {}",
+                  "if (json && json.access_token) {",
+                  "  pm.environment.set('token', json.access_token);",
+                  "}",
+                  "if (json && json.user && json.user.id) {",
+                  "  pm.environment.set('userId', json.user.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "let json = {};",
+                  "try { json = pm.response.json(); } catch (e) {}",
+                  "if (json && json.access_token) {",
+                  "  pm.environment.set('token', json.access_token);",
+                  "}",
+                  "if (json && json.user && json.user.id) {",
+                  "  pm.environment.set('userId', json.user.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Teams",
+      "item": [
+        {
+          "name": "My Team",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/teams/my-team",
+              "host": ["{{baseUrl}}"],
+              "path": ["teams", "my-team"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "let json = {};",
+                  "try { json = pm.response.json(); } catch (e) {}",
+                  "if (json && json.id) { pm.environment.set('teamId', json.id); }",
+                  "if (json && Array.isArray(json.players) && json.players.length) {",
+                  "  pm.environment.set('playerIdSample', json.players[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Transfers",
+      "item": [
+        {
+          "name": "Search Transfers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transfers?teamName={{teamName}}&playerName={{playerName}}&minPrice={{minPrice}}&maxPrice={{maxPrice}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["transfers"],
+              "query": [
+                {"key": "teamName", "value": "{{teamName}}"},
+                {"key": "playerName", "value": "{{playerName}}"},
+                {"key": "minPrice", "value": "{{minPrice}}"},
+                {"key": "maxPrice", "value": "{{maxPrice}}"}
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.expect(pm.response.code).to.equal(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Player",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transfers/list-player",
+              "host": ["{{baseUrl}}"],
+              "path": ["transfers", "list-player"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"playerId\": \"{{playerId}}\",\n  \"askingPrice\": {{askingPrice}}\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 or 201', function () {",
+                  "  pm.expect([200,201]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Remove Player",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transfers/remove-player",
+              "host": ["{{baseUrl}}"],
+              "path": ["transfers", "remove-player"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"playerId\": \"{{playerId}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.expect(pm.response.code).to.equal(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Buy Player (95%)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transfers/buy-player",
+              "host": ["{{baseUrl}}"],
+              "path": ["transfers", "buy-player"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"playerId\": \"{{playerId}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.expect(pm.response.code).to.equal(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+

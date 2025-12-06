@@ -1,0 +1,11 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = () => ({
+    port: Number(process.env.TEAM_SERVICE_PORT || 3002),
+    databaseUrl: process.env.DATABASE_URL,
+    rmqUrl: process.env.RABBITMQ_URL,
+    initialBudget: Number(process.env.INITIAL_BUDGET || 5000000),
+    positionCounts: { GK: 3, DEF: 6, MID: 6, ATT: 5 },
+    transferDiscount: Number(process.env.TRANSFER_DISCOUNT || 0.95),
+});
+//# sourceMappingURL=app.config.js.map
