@@ -45,25 +45,34 @@ export class PlayerController {
     @Body() body: ImprovePlayerSkillDto
     // req injected by JwtAuthGuard, typically via @Req, but kept minimal here
   ) {
-    const userId = "gateway-user-context";
-    this.logger.log(
-      `Gateway improve skill ${body.skill} by ${body.amount} for player ${playerId}`
-    );
-    const obs = this.teamServiceClient
-      .send("improve_player_skill", {
-        userId,
-        playerId,
-        skill: body.skill,
-        amount: body.amount,
-      })
-      .pipe(
-        timeout(5000),
-        catchError((err) => {
-          this.logger.error(`Circuit breaker tripped: ${err?.message || err}`);
-          throw err;
-        })
+    try {
+      const userId = "gateway-user-context";
+      this.logger.log(
+        `Gateway improve skill ${body.skill} by ${body.amount} for player ${playerId}`
       );
-    return firstValueFrom(obs);
+      const obs = this.teamServiceClient
+        .send("improve_player_skill", {
+          userId,
+          playerId,
+          skill: body.skill,
+          amount: body.amount,
+        })
+        .pipe(
+          timeout(5000),
+          catchError((err) => {
+            this.logger.error(
+              `Circuit breaker tripped: ${err?.message || err}`
+            );
+            throw err;
+          })
+        );
+      return await firstValueFrom(obs);
+    } catch (err) {
+      const { buildHttpException } = await import(
+        "../common/errors/error.helper"
+      );
+      throw buildHttpException(err, PlayerController.name);
+    }
   }
 
   // OpenAPI requested endpoint: /api/v1/players/improve (served under gateway base path)
@@ -109,29 +118,38 @@ export class PlayerController {
   @ApiResponse({ status: 500, description: "Internal server error" })
   @ApiBearerAuth("JWT")
   async improveSkillV1(@Body() reqBody: ImprovePlayerSkillRequestDto) {
-    const userId = "gateway-user-context";
-    this.logger.log(
-      `Gateway v1 improve skill ${reqBody.improvement_type} by ${reqBody.value} for player ${reqBody.player_id}`
-    );
-    const obs = this.teamServiceClient
-      .send("improve_player_skill", {
-        userId,
-        playerId: reqBody.player_id,
-        skill: reqBody.improvement_type,
-        amount: reqBody.value,
-      })
-      .pipe(
-        timeout(5000),
-        catchError((err) => {
-          this.logger.error(`Circuit breaker tripped: ${err?.message || err}`);
-          throw err;
-        })
+    try {
+      const userId = "gateway-user-context";
+      this.logger.log(
+        `Gateway v1 improve skill ${reqBody.improvement_type} by ${reqBody.value} for player ${reqBody.player_id}`
       );
-    const updated = await firstValueFrom(obs);
-    const resp: ImprovePlayerSkillResponseDto = {
-      success: true,
-      updated_player_data: updated,
-    };
-    return resp;
+      const obs = this.teamServiceClient
+        .send("improve_player_skill", {
+          userId,
+          playerId: reqBody.player_id,
+          skill: reqBody.improvement_type,
+          amount: reqBody.value,
+        })
+        .pipe(
+          timeout(5000),
+          catchError((err) => {
+            this.logger.error(
+              `Circuit breaker tripped: ${err?.message || err}`
+            );
+            throw err;
+          })
+        );
+      const updated = await firstValueFrom(obs);
+      const resp: ImprovePlayerSkillResponseDto = {
+        success: true,
+        updated_player_data: updated,
+      };
+      return resp;
+    } catch (err) {
+      const { buildHttpException } = await import(
+        "../common/errors/error.helper"
+      );
+      throw buildHttpException(err, PlayerController.name);
+    }
   }
 }

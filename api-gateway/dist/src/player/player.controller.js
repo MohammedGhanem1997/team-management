@@ -29,41 +29,53 @@ let PlayerController = PlayerController_1 = class PlayerController {
         this.logger = new common_1.Logger(PlayerController_1.name);
     }
     async improveSkill(playerId, body) {
-        const userId = "gateway-user-context";
-        this.logger.log(`Gateway improve skill ${body.skill} by ${body.amount} for player ${playerId}`);
-        const obs = this.teamServiceClient
-            .send("improve_player_skill", {
-            userId,
-            playerId,
-            skill: body.skill,
-            amount: body.amount,
-        })
-            .pipe((0, rxjs_1.timeout)(5000), (0, rxjs_1.catchError)((err) => {
-            this.logger.error(`Circuit breaker tripped: ${err?.message || err}`);
-            throw err;
-        }));
-        return (0, rxjs_1.firstValueFrom)(obs);
+        try {
+            const userId = "gateway-user-context";
+            this.logger.log(`Gateway improve skill ${body.skill} by ${body.amount} for player ${playerId}`);
+            const obs = this.teamServiceClient
+                .send("improve_player_skill", {
+                userId,
+                playerId,
+                skill: body.skill,
+                amount: body.amount,
+            })
+                .pipe((0, rxjs_1.timeout)(5000), (0, rxjs_1.catchError)((err) => {
+                this.logger.error(`Circuit breaker tripped: ${err?.message || err}`);
+                throw err;
+            }));
+            return await (0, rxjs_1.firstValueFrom)(obs);
+        }
+        catch (err) {
+            const { buildHttpException } = await Promise.resolve().then(() => require("../common/errors/error.helper"));
+            throw buildHttpException(err, PlayerController_1.name);
+        }
     }
     async improveSkillV1(reqBody) {
-        const userId = "gateway-user-context";
-        this.logger.log(`Gateway v1 improve skill ${reqBody.improvement_type} by ${reqBody.value} for player ${reqBody.player_id}`);
-        const obs = this.teamServiceClient
-            .send("improve_player_skill", {
-            userId,
-            playerId: reqBody.player_id,
-            skill: reqBody.improvement_type,
-            amount: reqBody.value,
-        })
-            .pipe((0, rxjs_1.timeout)(5000), (0, rxjs_1.catchError)((err) => {
-            this.logger.error(`Circuit breaker tripped: ${err?.message || err}`);
-            throw err;
-        }));
-        const updated = await (0, rxjs_1.firstValueFrom)(obs);
-        const resp = {
-            success: true,
-            updated_player_data: updated,
-        };
-        return resp;
+        try {
+            const userId = "gateway-user-context";
+            this.logger.log(`Gateway v1 improve skill ${reqBody.improvement_type} by ${reqBody.value} for player ${reqBody.player_id}`);
+            const obs = this.teamServiceClient
+                .send("improve_player_skill", {
+                userId,
+                playerId: reqBody.player_id,
+                skill: reqBody.improvement_type,
+                amount: reqBody.value,
+            })
+                .pipe((0, rxjs_1.timeout)(5000), (0, rxjs_1.catchError)((err) => {
+                this.logger.error(`Circuit breaker tripped: ${err?.message || err}`);
+                throw err;
+            }));
+            const updated = await (0, rxjs_1.firstValueFrom)(obs);
+            const resp = {
+                success: true,
+                updated_player_data: updated,
+            };
+            return resp;
+        }
+        catch (err) {
+            const { buildHttpException } = await Promise.resolve().then(() => require("../common/errors/error.helper"));
+            throw buildHttpException(err, PlayerController_1.name);
+        }
     }
 };
 exports.PlayerController = PlayerController;

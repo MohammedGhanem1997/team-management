@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
   BadRequestException,
+  Logger,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, Between, Like } from "typeorm";
@@ -21,6 +22,7 @@ import { BuyPlayerDto } from "./dto/buy-player.dto";
 
 @Injectable()
 export class TransferService {
+  private readonly logger = new Logger(TransferService.name);
   constructor(
     @InjectRepository(Team)
     private teamRepository: Repository<Team>,
@@ -108,6 +110,9 @@ export class TransferService {
     }
 
     if (!player.isOnTransferList) {
+      this.logger.warn(
+        `Attempt to buy player ${player.id} not on transfer list`
+      );
       throw new ConflictException("Player is not on transfer list");
     }
 

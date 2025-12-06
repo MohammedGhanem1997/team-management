@@ -11,41 +11,65 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var TransferController_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TransferController = void 0;
 const common_1 = require("@nestjs/common");
 const microservices_1 = require("@nestjs/microservices");
 const rxjs_1 = require("rxjs");
+const common_2 = require("@nestjs/common");
+const error_helper_1 = require("../common/errors/error.helper");
 const swagger_1 = require("@nestjs/swagger");
 const jwt_auth_guard_1 = require("../common/guards/jwt-auth.guard");
 const throttler_1 = require("@nestjs/throttler");
 const transfer_filter_dto_1 = require("./dto/transfer-filter.dto");
 const list_player_dto_1 = require("./dto/list-player.dto");
 const buy_player_dto_1 = require("./dto/buy-player.dto");
-let TransferController = class TransferController {
+let TransferController = TransferController_1 = class TransferController {
     constructor(teamServiceClient) {
         this.teamServiceClient = teamServiceClient;
+        this.logger = new common_2.Logger(TransferController_1.name);
     }
     async getTransfers(filters) {
-        return (0, rxjs_1.firstValueFrom)(this.teamServiceClient.send("get_transfers", filters));
+        try {
+            return await (0, rxjs_1.firstValueFrom)(this.teamServiceClient.send("get_transfers", filters));
+        }
+        catch (err) {
+            throw (0, error_helper_1.buildHttpException)(err, TransferController_1.name);
+        }
     }
     async listPlayer(req, listPlayerDto) {
-        return (0, rxjs_1.firstValueFrom)(this.teamServiceClient.send("list_player", {
-            userId: req.user.id,
-            ...listPlayerDto,
-        }));
+        try {
+            return await (0, rxjs_1.firstValueFrom)(this.teamServiceClient.send("list_player", {
+                userId: req.user.id,
+                ...listPlayerDto,
+            }));
+        }
+        catch (err) {
+            throw (0, error_helper_1.buildHttpException)(err, TransferController_1.name);
+        }
     }
     async removePlayerFromTransferList(req, playerId) {
-        return (0, rxjs_1.firstValueFrom)(this.teamServiceClient.send("remove_player_from_transfer", {
-            userId: req.user.id,
-            playerId,
-        }));
+        try {
+            return await (0, rxjs_1.firstValueFrom)(this.teamServiceClient.send("remove_player_from_transfer", {
+                userId: req.user.id,
+                playerId,
+            }));
+        }
+        catch (err) {
+            throw (0, error_helper_1.buildHttpException)(err, TransferController_1.name);
+        }
     }
     async buyPlayer(req, buyPlayerDto) {
-        return (0, rxjs_1.firstValueFrom)(this.teamServiceClient.send("buy_player", {
-            userId: req.user.id,
-            ...buyPlayerDto,
-        }));
+        try {
+            return await (0, rxjs_1.firstValueFrom)(this.teamServiceClient.send("buy_player", {
+                userId: req.user.id,
+                ...buyPlayerDto,
+            }));
+        }
+        catch (err) {
+            throw (0, error_helper_1.buildHttpException)(err, TransferController_1.name);
+        }
     }
 };
 exports.TransferController = TransferController;
@@ -90,13 +114,14 @@ __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, swagger_1.ApiOperation)({ summary: "Buy player from transfer market" }),
     (0, swagger_1.ApiResponse)({ status: 200, description: "Player purchased successfully" }),
+    (0, swagger_1.ApiResponse)({ status: 409, description: "Player is not on transfer list" }),
     __param(0, (0, common_1.Req)()),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, buy_player_dto_1.BuyPlayerDto]),
     __metadata("design:returntype", Promise)
 ], TransferController.prototype, "buyPlayer", null);
-exports.TransferController = TransferController = __decorate([
+exports.TransferController = TransferController = TransferController_1 = __decorate([
     (0, swagger_1.ApiTags)("Transfer Market"),
     (0, swagger_1.ApiBearerAuth)("JWT"),
     (0, common_1.Controller)("transfers"),

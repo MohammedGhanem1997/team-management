@@ -4,6 +4,7 @@ import { ListPlayerDto } from "./dto/list-player.dto";
 import { BuyPlayerDto } from "./dto/buy-player.dto";
 export declare class TransferController {
     private readonly teamServiceClient;
+    private readonly logger;
     constructor(teamServiceClient: ClientProxy);
     getTransfers(filters: TransferFilterDto): Promise<any>;
     listPlayer(req: any, listPlayerDto: ListPlayerDto): Promise<any>;

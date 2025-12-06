@@ -10,6 +10,8 @@ import {
 } from "@nestjs/common";
 import { ClientProxy } from "@nestjs/microservices";
 import { firstValueFrom } from "rxjs";
+import { Logger } from "@nestjs/common";
+import { buildHttpException } from "../common/errors/error.helper";
 import {
   ApiTags,
   ApiOperation,
@@ -26,6 +28,7 @@ import { BuyPlayerDto } from "./dto/buy-player.dto";
 @ApiBearerAuth("JWT")
 @Controller("transfers")
 export class TransferController {
+  private readonly logger = new Logger(TransferController.name);
   constructor(
     @Inject("TEAM_SERVICE")
     private readonly teamServiceClient: ClientProxy
@@ -37,9 +40,13 @@ export class TransferController {
   @ApiOperation({ summary: "Get available transfers" })
   @ApiResponse({ status: 200, description: "Transfers retrieved successfully" })
   async getTransfers(@Query() filters: TransferFilterDto) {
-    return firstValueFrom(
-      this.teamServiceClient.send("get_transfers", filters)
-    );
+    try {
+      return await firstValueFrom(
+        this.teamServiceClient.send("get_transfers", filters)
+      );
+    } catch (err) {
+      throw buildHttpException(err, TransferController.name);
+    }
   }
 
   @Post("list-player")
@@ -48,12 +55,16 @@ export class TransferController {
   @ApiOperation({ summary: "List player on transfer market" })
   @ApiResponse({ status: 200, description: "Player listed successfully" })
   async listPlayer(@Req() req: any, @Body() listPlayerDto: ListPlayerDto) {
-    return firstValueFrom(
-      this.teamServiceClient.send("list_player", {
-        userId: req.user.id,
-        ...listPlayerDto,
-      })
-    );
+    try {
+      return await firstValueFrom(
+        this.teamServiceClient.send("list_player", {
+          userId: req.user.id,
+          ...listPlayerDto,
+        })
+      );
+    } catch (err) {
+      throw buildHttpException(err, TransferController.name);
+    }
   }
 
   @Post("remove-player")
@@ -65,12 +76,16 @@ export class TransferController {
     @Req() req: any,
     @Body("playerId") playerId: string
   ) {
-    return firstValueFrom(
-      this.teamServiceClient.send("remove_player_from_transfer", {
-        userId: req.user.id,
-        playerId,
-      })
-    );
+    try {
+      return await firstValueFrom(
+        this.teamServiceClient.send("remove_player_from_transfer", {
+          userId: req.user.id,
+          playerId,
+        })
+      );
+    } catch (err) {
+      throw buildHttpException(err, TransferController.name);
+    }
   }
 
   @Post("buy-player")
@@ -78,12 +93,17 @@ export class TransferController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: "Buy player from transfer market" })
   @ApiResponse({ status: 200, description: "Player purchased successfully" })
+  @ApiResponse({ status: 409, description: "Player is not on transfer list" })
   async buyPlayer(@Req() req: any, @Body() buyPlayerDto: BuyPlayerDto) {
-    return firstValueFrom(
-      this.teamServiceClient.send("buy_player", {
-        userId: req.user.id,
-        ...buyPlayerDto,
-      })
-    );
+    try {
+      return await firstValueFrom(
+        this.teamServiceClient.send("buy_player", {
+          userId: req.user.id,
+          ...buyPlayerDto,
+        })
+      );
+    } catch (err) {
+      throw buildHttpException(err, TransferController.name);
+    }
   }
 }
