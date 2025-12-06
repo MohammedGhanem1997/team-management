@@ -5,6 +5,7 @@ import { AuthController } from "./auth/auth.controller";
 import { TeamController } from "./team/team.controller";
 import { TransferController } from "./transfer/transfer.controller";
 import { PlayerController } from "./player/player.controller";
+import { PlayerV1Controller } from "./player/player.v1.controller";
 import { AdminController } from "./admin/admin.controller";
 import { JwtModule } from "@nestjs/jwt";
 import { HttpModule } from "@nestjs/axios";
@@ -70,6 +71,7 @@ import { ApiThrottlerGuard } from "./common/guards/api-throttler.guard";
     TeamController,
     TransferController,
     PlayerController,
+    PlayerV1Controller,
     AdminController,
   ],
   providers: [{ provide: APP_GUARD, useClass: ApiThrottlerGuard }],
