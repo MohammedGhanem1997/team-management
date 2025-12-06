@@ -93,23 +93,6 @@ cd ../team-service
 npm run migration:run
 ```
 
-### 6. Start the Services
-
-Open 3 terminal windows:
-
-```bash
-# Terminal 1 - Auth Service
-cd auth-service
-npm run start:dev
-
-# Terminal 2 - Team Service
-cd team-service
-npm run start:dev
-
-# Terminal 3 - API Gateway
-cd api-gateway
-npm run start:dev
-```
 
 The API Gateway will be available at `http://localhost:3000`
 
@@ -185,6 +168,73 @@ Query params: `teamName`, `playerName`, `minPrice`, `maxPrice`
   "playerId": "uuid"
 }
 ```
+
+### Player Improvements
+
+- `POST /api/v1/players/improve`
+  - Body:
+    ```json
+    {
+      "player_id": "uuid",
+      "improvement_type": "pace",
+      "value": 3
+    }
+    ```
+  - Security: `Authorization: Bearer <token>`
+  - Rate limiting: `20 req / 60s`
+  - Response:
+    ```json
+    {
+      "success": true,
+      "updated_player_data": { ...player fields... }
+    }
+    ```
+
+- `POST /players/:playerId/skills`
+  - Body:
+    ```json
+    {
+      "skill": "pace",
+      "amount": 3
+    }
+    ```
+  - Security: `Authorization: Bearer <token>`
+  - Rate limiting: `20 req / 60s`
+
+## Endpoint Catalog
+
+Below is a quick catalog of available HTTP endpoints via the API Gateway:
+
+- Authentication
+  - `POST /auth/register` — Register user
+  - `POST /auth/login` — Login and get JWT
+- Team Management
+  - `GET /teams/my-team` — Get current user's team (JWT required)
+- Transfer Market
+  - `GET /transfers` — List transfer market, filters supported
+  - `POST /transfers/list-player` — List a player (JWT required)
+  - `POST /transfers/remove-player` — Remove a player from listing (JWT required)
+  - `POST /transfers/buy-player` — Buy a listed player (JWT required)
+- Player Improvements
+  - `POST /api/v1/players/improve` — Improve player skill by type/value (JWT required)
+  - `POST /players/:playerId/skills` — Improve a specific player's skill (JWT required)
+
+## Swagger / OpenAPI
+
+The API Gateway exposes Swagger docs.
+
+- Start the API Gateway (Docker or local):
+  - Docker: `docker compose up -d api-gateway`
+  - Local: `cd api-gateway && npm run start:dev`
+- Open Swagger UI:
+  - `http://localhost:3000/api`
+- Authentication in Swagger:
+  - Click `Authorize`, paste `Bearer <token>` from `/auth/login` or `/auth/register` response.
+- Explore endpoints under sections: Authentication, Team Management, Transfer Market, Players.
+- Models for player improvement:
+  - Request: `ImprovePlayerSkillRequestDto`
+  - Response: `ImprovePlayerSkillResponseDto`
+  - Player: `PlayerDto`
 
 ## Testing
 
@@ -428,11 +478,3 @@ API Gateway will be available at `http://localhost:3000`. Swagger docs: `http://
 - Confirm environment variables loaded in each service
 - Run `npm run build` before migrations
 
-## License
-
-MIT
-
-## Contact
-
-For questions or issues, please open a GitHub issue.
-API Gateway enforces authentication via a JWT guard for protected endpoints (teams and transfers). Ensure `Authorization: Bearer <token>` is set.
