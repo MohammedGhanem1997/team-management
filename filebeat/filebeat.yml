@@ -1,0 +1,21 @@
+filebeat.modules: []
+filebeat.inputs:
+  - type: container
+    enabled: true
+    paths:
+      - /var/lib/docker/containers/*/*.log
+    processors:
+      - add_docker_metadata: ~
+    containers:
+      stream: all
+
+setup.kibana:
+  host: kibana:5601
+setup.dashboards.enabled: true
+
+output.elasticsearch:
+  hosts: ["elasticsearch:9200"]
+  protocol: "http"
+
+logging.level: info
+
