@@ -10,6 +10,7 @@ import {
 } from "@nestjs/common";
 import { ClientProxy } from "@nestjs/microservices";
 import { firstValueFrom } from "rxjs";
+import { ConflictException, Logger } from "@nestjs/common";
 import {
   ApiTags,
   ApiOperation,
@@ -26,6 +27,7 @@ import { BuyPlayerDto } from "./dto/buy-player.dto";
 @ApiBearerAuth("JWT")
 @Controller("transfers")
 export class TransferController {
+  private readonly logger = new Logger(TransferController.name);
   constructor(
     @Inject("TEAM_SERVICE")
     private readonly teamServiceClient: ClientProxy
@@ -78,12 +80,22 @@ export class TransferController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: "Buy player from transfer market" })
   @ApiResponse({ status: 200, description: "Player purchased successfully" })
+  @ApiResponse({ status: 409, description: "Player is not on transfer list" })
   async buyPlayer(@Req() req: any, @Body() buyPlayerDto: BuyPlayerDto) {
-    return firstValueFrom(
-      this.teamServiceClient.send("buy_player", {
-        userId: req.user.id,
-        ...buyPlayerDto,
-      })
-    );
+    try {
+      return await firstValueFrom(
+        this.teamServiceClient.send("buy_player", {
+          userId: req.user.id,
+          ...buyPlayerDto,
+        })
+      );
+    } catch (err: any) {
+      const msg = err?.message || err?.response?.message || "Unknown error";
+      this.logger.warn(`Buy player failed: ${msg}`);
+      if (msg && typeof msg === "string" && msg.includes("not on transfer list")) {
+        throw new ConflictException("Player is not on transfer list");
+      }
+      throw err;
+    }
   }
 }

@@ -185,6 +185,10 @@ Query params: `teamName`, `playerName`, `minPrice`, `maxPrice`
   "playerId": "uuid"
 }
 ```
+Errors:
+- 409 Conflict: `{"statusCode":409,"message":"Player is not on transfer list"}`
+- 401 Unauthorized: Missing/invalid token
+- 500 Internal Server Error: unexpected failure
 
 ### Player Improvements
 
