@@ -12,9 +12,11 @@ The system consists of 3 microservices:
 ## Prerequisites
 
 - Node.js (v18 or higher)
-- Docker and Docker Compose
+- Docker and Docker Compose (optional, for containerized run)
 - PostgreSQL
 - RabbitMQ
+- Redis
+- ELK Stack (Elasticsearch + Kibana) and Elastic APM Server (optional but recommended)
 
 ## Project Structure
 
@@ -33,7 +35,7 @@ football-manager/
 ### 1. Clone the Repository
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/MohammedGhanem1997/team-management.git
 cd football-manager
 ```
 
@@ -62,8 +64,8 @@ TEAM_DATABASE_URL=postgresql://postgres:password@team-postgres:5432/football_tea
 ```
 
 Development and production configs live under `config/`:
-- `config/dev/.env` (defaults for local dev)
-- `config/prod/.env` (production overrides)
+- `config/dev/` (defaults for local dev)
+- `config/prod/` (production overrides)
 
 Services load envs via Nest Config with `envFilePath` set based on `NODE_ENV`. Missing critical configs (e.g., `JWT_SECRET`) will abort requests with proper errors.
 
@@ -282,6 +284,149 @@ Ensure `.env` exists at project root and contains `JWT_SECRET`, `AUTH_DATABASE_U
 # Change ports in .env files or kill the process
 lsof -ti:3000 | xargs kill -9
 ```
+
+---
+
+## Running Without Docker (Local Services)
+
+You can run everything locally without Docker by installing and starting the infrastructure services on your machine, setting local environment variables, running migrations, and starting each Nest service.
+
+### 1. Install and Start Infrastructure
+
+- PostgreSQL (default port `5432`)
+  - Create two databases: `football_auth`, `football_teams`
+  - Example (psql):
+    ```sql
+    CREATE DATABASE football_auth;
+    CREATE DATABASE football_teams;
+    ```
+- RabbitMQ (default port `5672`)
+- Redis (default port `6379`)
+- Elasticsearch (7.17.x) and Kibana (optional)
+- Elastic APM Server (optional)
+
+Ensure all services are running and reachable on localhost.
+
+### 2. Configure Environment Variables (Local)
+
+Create a `.env` file at project root (or use `config/dev/.env`) with localhost values:
+
+```env
+# API Gateway
+API_GATEWAY_PORT=3000
+RABBITMQ_URL=amqp://localhost:5672
+REDIS_URL=redis://localhost:6379
+
+# Auth service (TCP microservice for API Gateway; Nest HTTP port 3001 if needed)
+AUTH_SERVICE_HOST=localhost
+AUTH_TCP_PORT=3003
+AUTH_DATABASE_URL=postgresql://postgres:password@localhost:5432/football_auth
+JWT_SECRET=your-secret-key-change-in-production
+
+# Team service (RMQ microservice)
+TEAM_SERVICE_HOST=localhost
+TEAM_SERVICE_PORT=3002
+TEAM_DATABASE_URL=postgresql://postgres:password@localhost:5432/football_teams
+
+# Optional Observability
+APM_SERVER_URL=http://localhost:8200
+```
+
+Alternatively, you can place a service-specific `.env` inside each service folder with the subset it needs:
+
+- `auth-service/.env`
+  ```env
+  DATABASE_URL=postgresql://postgres:password@localhost:5432/football_auth
+  RABBITMQ_URL=amqp://localhost:5672
+  JWT_SECRET=your-secret-key-change-in-production
+  AUTH_TCP_PORT=3003
+  ```
+- `team-service/.env`
+  ```env
+  DATABASE_URL=postgresql://postgres:password@localhost:5432/football_teams
+  RABBITMQ_URL=amqp://localhost:5672
+  PORT=3002
+  ```
+- `api-gateway/.env`
+  ```env
+  PORT=3000
+  AUTH_SERVICE_HOST=localhost
+  AUTH_TCP_PORT=3003
+  TEAM_SERVICE_HOST=localhost
+  TEAM_SERVICE_PORT=3002
+  RABBITMQ_URL=amqp://localhost:5672
+  REDIS_URL=redis://localhost:6379
+  APM_SERVER_URL=http://localhost:8200
+  ```
+
+### 3. Install Dependencies
+
+```bash
+cd api-gateway && npm install && cd ..
+cd auth-service && npm install && cd ..
+cd team-service && npm install && cd ..
+```
+
+### 4. Run Database Migrations (Local)
+
+```bash
+# Auth service
+cd auth-service
+npm run build
+npm run migration:run
+
+# Team service
+cd ../team-service
+npm run build
+npm run migration:run
+```
+
+### 5. Start Services (Local)
+
+Open three terminals:
+
+```bash
+# Terminal 1 - Auth Service (TCP microservice + JWT)
+cd auth-service
+npm run start:dev
+
+# Terminal 2 - Team Service (RMQ microservice)
+cd team-service
+npm run start:dev
+
+# Terminal 3 - API Gateway (HTTP)
+cd api-gateway
+npm run start:dev
+```
+
+API Gateway will be available at `http://localhost:3000`. Swagger docs: `http://localhost:3000/api`.
+
+### 6. Verify Messaging and Endpoints
+
+- Register/login via Gateway auth endpoints to obtain a JWT.
+- Team creation is emitted by Auth to Team via RabbitMQ and processed asynchronously.
+- Player improvement endpoint (Gateway):
+  - `POST /api/v1/players/improve`
+  - Body:
+    ```json
+    {
+      "player_id": "uuid",
+      "improvement_type": "pace",
+      "value": 3
+    }
+    ```
+  - Requires `Authorization: Bearer <token>` header.
+
+### 7. Optional Observability
+
+- Elastic APM Server: set `APM_SERVER_URL=http://localhost:8200` (Gateway has APM instrumentation)
+- Elasticsearch & Kibana: start locally and configure indices as needed
+
+### 8. Troubleshooting (Local)
+
+- Ensure ports are not in use (3000, 3001, 3002, 3003, 5432, 5672, 6379, 9200/5601/8200)
+- Confirm environment variables loaded in each service
+- Run `npm run build` before migrations
 
 ## License
 
